@@ -31,9 +31,35 @@ class EEGViTPre_pretrain(nn.Module):
         num_layers = 2  # Number of transformer layers
         output_dim = 129 * 500  # Output dimension
 
-        model.classifier = Decoder(d_model, nhead, num_layers, output_dim)
+        if num_layers:
+            model.classifier = Decoder(d_model, nhead, num_layers, output_dim)
+        else:
+            model.classifier = nn.Sequential(
+                nn.Linear(d_model, 2048, bias=True),
+                nn.GELU(),
+                nn.Dropout(0.1),
+                nn.Linear(2048, output_dim, bias=True)
+            )
 
         self.ViT = model
+
+    def forward_loss(self, eeg, pred, mask):
+        target = eeg.squeeze()
+        pred = pred.squeeze()
+        mask = mask.squeeze()
+
+        loss = (pred - target) ** 2
+        loss = (loss * (1 - mask)).sum() / (1 - mask).sum()
+        return loss
+
+    def forward(self, eeg, mask):
+        masked_eeg = eeg * mask
+        x = self.conv1(masked_eeg)
+        x = self.batchnorm1(x)
+        pred = self.ViT.forward(x).logits
+        pred = pred.view(eeg.shape)
+        loss = self.forward_loss(eeg, pred, mask)
+        return loss
 
 
 class Decoder(nn.Module):
