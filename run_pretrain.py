@@ -3,6 +3,7 @@ from helper_functions import split
 from dataset.EEGEyeNet import EEGEyeNetDataset
 import torch
 from torch.utils.data import DataLoader, Subset
+import numpy as np
 from tqdm import tqdm
 import argparse
 
@@ -118,11 +119,17 @@ def get_args_parser():
     parser.add_argument('--mask_ratio', default=0.5, type=float)
     parser.add_argument('--data_path', default='./dataset/Position_task_with_dots_synchronised_min.npz', type=str)
     parser.add_argument('--model_path', required=True, type=str, help='path to save pre-trained models')
+    parser.add_argument('--seed', default=0, type=int, help='random seed')
 
     return parser
 
 
 def main(args):
+    # fix the seed for reproducibility
+    seed = args.seed
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+
     model = EEGViTPre_pretrain()
     EEGEyeNet = EEGEyeNetDataset(args.data_path)
     batch_size = args.batch_size
