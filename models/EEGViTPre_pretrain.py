@@ -35,10 +35,9 @@ class EEGViTPre_pretrain(nn.Module):
             model.classifier = Decoder(d_model, nhead, num_layers, output_dim)
         else:
             model.classifier = nn.Sequential(
-                nn.Linear(d_model, 2048, bias=True),
-                nn.GELU(),
-                nn.Dropout(0.1),
-                nn.Linear(2048, output_dim, bias=True)
+                nn.Linear(d_model, d_model//2, bias=True),
+                nn.ReLU(),
+                nn.Linear(d_model//2, output_dim, bias=True)
             )
 
         self.ViT = model
@@ -66,24 +65,16 @@ class Decoder(nn.Module):
     def __init__(self, d_model, nhead, num_layers, output_dim):
         super().__init__()
 
-        decoder_embed_dim = 512
-        self.decoder_embed = nn.Linear(d_model, decoder_embed_dim, bias=True)
-        decoder_layers = nn.TransformerEncoderLayer(d_model=decoder_embed_dim, nhead=nhead, batch_first=True)
+        decoder_layers = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
         self.decoder = nn.TransformerEncoder(decoder_layers, num_layers=num_layers)
 
-        self.fc1 = nn.Linear(decoder_embed_dim, d_model, bias=True)
-        self.fc2 = nn.Linear(d_model, 2048, bias=True)
-        self.decoder_pred = nn.Linear(2048, output_dim, bias=True)
+        self.fc = nn.Linear(d_model, d_model//2, bias=True)
+        self.decoder_pred = nn.Linear(d_model//2, output_dim, bias=True)
 
     def forward(self, x):
-        x = self.decoder_embed(x)
         x = self.decoder(x)
-        x = self.fc1(x)
-        x = nn.GELU()(x)
-        x = nn.Dropout(0.1)(x)
-        x = self.fc2(x)
-        x = nn.GELU()(x)
-        x = nn.Dropout(0.1)(x)
-        x = self.decoder_pred(x)
-        return x
+        x = self.fc(x)
+        x = nn.ReLU()(x)
+        pred = self.decoder_pred(x)
+        return pred
 
