@@ -132,11 +132,6 @@ def get_args_parser():
 
 
 def main(args):
-    # fix the seed for reproducibility
-    seed = args.seed
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-
     model = EEGViTPre_finetune()
     model.load_pretrained(args.weight_path)
     EEGEyeNet = EEGEyeNetDataset(args.data_path)
